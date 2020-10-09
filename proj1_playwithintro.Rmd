@@ -1,0 +1,160 @@
+---
+title: "Project 1"
+author: "Xiaoli Sun(xs2338)"
+date: "9/20/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+### Check `R` packages for data processing
+
+```{r load libraries, warning=FALSE, message=FALSE, include=FALSE}
+packages.used=as.list(
+  c(
+  "tidyverse",
+  "haven",
+  "devtools",
+  "RColorBrewer",
+  "data.table",
+  "ggplot2")
+)
+
+check.pkg = function(x){
+  if(!require(x, character.only=T)) install.packages(x, 
+                                                     character.only=T,
+                                                     dependence=T)
+}
+
+lapply(packages.used, check.pkg)
+```
+
+### Import raw ANES data
+
+```{r read in data, message = F}
+library(haven)
+anes_dat <-
+    read_sav("/Users/liloli/Documents/GitHub/Fall2020-Project1-freezingdaisy/data/anes_timeseries_cdf.sav")
+```
+
+Some basic data summaries: there are `r nrow(anes_dat)` respondents and `r ncol(anes_dat)` variables.
+
+```{r year barplot}
+barplot(table(anes_dat$VCF0004),
+        las=2,
+        main="number of respondents over the years")
+```
+
+Some variables are asked nearly all the years and some are asked only a few years. 
+
+```{r NAs}
+anes_NAs=anes_dat%>%
+  summarise_all(list(na.mean=function(x){
+                              mean(is.na(x))}))
+anes_NAs=data.frame(nas=unlist(t(anes_NAs)))
+
+ggplot(anes_NAs, aes(x=nas)) + 
+  geom_histogram(color="black", 
+                 fill="white",
+                 binwidth=0.05)+
+  labs(title="Fractions of missing values")
+```
+
+### Process variables for analysis
+
+In the following, we will create a few variables for this tutorial. These variables were selected based on their description in the ANES codebook. You are encouraged to look them up and read about how they were prepared. 
+
+First let's look at our data. One advantage of using the SPSS SAV data is that the values are *labelled*. By converting labelled data to factor, you can easily reveal the responses encoded by numbers. We selected four variables for subsequent analysis and save the filtered data sets to the `output` folder. 
+
+```{r labelled variables subset}
+Election_years=as.character(seq(1952, 2016, 4))
+
+anes_use=anes_dat%>%
+  mutate(
+    year=as_factor(VCF0004),
+    turnout=as_factor(VCF0703),
+    vote=as_factor(VCF0706),
+    race=as_factor(VCF0105a),
+    gender=as_factor(VCF0104)
+  )%>%
+  filter(year %in% Election_years)
+
+library(data.table)
+
+data.table(anes_use%>%
+             select(year, turnout, vote, race, gender)%>%
+             filter(!is.na(turnout))%>%
+             sample_n(30))
+```
+
+```{r}
+anes_use%>%select(year, turnout, vote, race, gender)
+```
+
+```{r}
+#To save a data I need absolute path. 
+save(anes_use, file="/Users/liloli/Documents/GitHub/Fall2020-Project1-freezingdaisy/output/data_use.RData") 
+```
+
+# 4. A simple analysis
+
+## 4.1 Who went to vote in the election?
+
+First, we would like to see whether different racial groups have different turnout rates on the election day.
+
+```{r turnout analysis, fig.height=14, fig.width=8}
+load(file="../output/data_use.RData")
+anes_to_race_year = anes_use %>%
+  filter(!is.na(race) & !is.na(turnout))%>%
+  group_by(year, race, turnout)%>%
+  count(turnout)%>%
+  group_by(year, race)%>%
+  mutate(
+    prop=n/sum(n)
+  )
+anes_to_race_year%>%head(6)
+```
+
+
+```{r, fig.width = 8, fig.height = 14} 
+ggplot(anes_to_race_year, 
+       aes(x=year, y=prop, fill=turnout)) +
+  geom_bar(stat="identity", colour="black") + facet_wrap(~race, ncol=1) +  theme_light()+ 
+  labs(title="How did different racial groups participated in the election \n over the years?")
+```
+
+## 4.2 Who did they vote for in the election?
+```{r}
+anes_vote_race_year = anes_use %>%
+  filter(!is.na(race) & !is.na(vote))%>%
+  filter(vote!="7. Did not vote or voted but not for president (exc.1972)")%>%
+  group_by(year, race)%>%
+  count(vote)%>%
+  group_by(year, race)%>%
+  mutate(
+    prop=n/sum(n)
+  ) %>%  filter(vote == "1. Democrat" | vote == "2. Republican")
+anes_vote_race_year
+```
+
+```{r, fig.height=14, fig.width=8}
+ggplot(anes_vote_race_year, 
+       aes(x=year, y=prop, fill=vote)) +
+  geom_bar(stat="identity", colour="black")+ 
+  scale_fill_manual(values=c("blue", "green"))+
+  facet_wrap(~race, ncol=1) + 
+  theme(axis.text.x = element_text(angle = 90))+
+  labs(title="Who did racial groups vote for in the election \n over the years?")
+```
+
+
+
+
+
+
+
+
