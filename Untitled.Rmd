@@ -1,0 +1,61 @@
+---
+title: "Untitled"
+author: "Xiaoli Sun(xs2338)"
+date: "9/21/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+use_python("/opt/anaconda3/bin/python")
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(python.reticulate = FALSE)
+```
+
+## R Markdown
+
+```{python}
+import pandas
+print("this is python")
+l = []
+l.append(1)
+l.append(5)
+print(l)
+```
+
+
+
+```{r, message = FALSE}
+library(knitr)
+
+df <- data.frame(bucket = 1:11,
+                 value = c("this", "is", -0.7189301, -0.7188391, -0.5047816,
+                           -0.3439579, -0.4376782, -0.1300217, 0.9145718, 2.1844290,
+                           4.8374356))
+
+kable(df)
+```
+
+
+
+
+
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
